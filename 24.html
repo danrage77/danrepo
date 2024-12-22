@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jogo de Magias</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #f0f0f0;
+    }
+    canvas {
+      display: block;
+      margin: 0 auto;
+      background-color: #222;
+    }
+    .button {
+      position: absolute;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      border: none;
+      font-size: 20px;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .left {
+      left: 20px;
+      bottom: 80px;
+    }
+    .right {
+      right: 20px;
+      bottom: 80px;
+    }
+    .shoot {
+      bottom: 150px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 24px;
+    }
+    .health-bar {
+      position: absolute;
+      font-size: 30px;
+      color: #ff0000;
+    }
+    .heart {
+      position: absolute;
+      font-size: 30px;
+      color: red;
+      top: 30px;
+      left: 20px;
+    }
+    #phrase {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 24px;
+      color: white;
+      text-align: center;
+      width: 80%;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <div id="phrase"></div>
+
+  <button class="button left" id="leftButton">Move Left</button>
+  <button class="button right" id="rightButton">Move Right</button>
+  <button class="button shoot" id="shootButton">Shoot</button>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let player1 = {
+      x: canvas.width / 2 - 50,
+      y: canvas.height - 100,
+      width: 50,
+      height: 50,
+      color: 'blue',
+      health: 3,
+      isShooting: false,
+      direction: null,
+      shootDirection: 1,
+      score: 0,
+    };
+
+    let player2 = {
+      x: canvas.width / 2 - 50,
+      y: 50,
+      width: 50,
+      height: 50,
+      color: 'green',
+      health: 3,
+      isShooting: false,
+      direction: null,
+      shootDirection: -1,
+      score: 0,
+    };
+
+    let bullets = [];
+    let lastShootTime = 0;
+
+    // Frases famosas de Jesus e Buda
+    const phrases = {
+      jesus: [
+        "Ama o próximo como a ti mesmo.",
+        "Eu sou o caminho, a verdade e a vida.",
+        "Bem-aventurados os pacificadores, pois serão chamados filhos de Deus."
+      ],
+      buda: [
+        "A paz vem de dentro de você mesmo.",
+        "Não viva no passado, não sonhe com o futuro, concentre a mente no momento presente.",
+        "A mente é tudo. O que você pensa, você se torna."
+      ]
+    };
+
+    let currentPhrase = "";
+
+    // Função para desenhar o jogador (Jesus ou Buda) com cruz ou roda do Dharma
+    function drawPlayer(player) {
+      ctx.fillStyle = player.color;
+
+      // Desenhar cruz para Jesus
+      if (player.color === 'blue') {
+        ctx.fillRect(player.x + player.width / 3, player.y, player.width / 3, player.height); // braço vertical
+        ctx.fillRect(player.x, player.y + player.height / 3, player.width, player.height / 3); // braço horizontal
+      }
+      
+      // Desenhar roda do Dharma para Buda
+      if (player.color === 'green') {
+        ctx.beginPath();
+        ctx.arc(player.x + player.width / 2, player.y + player.height / 2, player.width / 2, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.closePath();
+        ctx.fillStyle = 'yellow';
+        ctx.beginPath();
+        ctx.arc(player.x + player.width / 2, player.y + player.height / 2, player.width / 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.closePath();
+      }
+    }
+
+    // Função para desenhar balas
+    function drawBullets() {
+      bullets.forEach((bullet, index) => {
+        ctx.fillStyle = 'yellow';
+        ctx.beginPath();
+        ctx.moveTo(bullet.x, bullet.y);
+        ctx.lineTo(bullet.x + bullet.width, bullet.y + bullet.height);
+        ctx.lineWidth = bullet.width;
+        ctx.stroke();
+        ctx.closePath();
+
+        // Se a bala sair da tela, removê-la
+        if (bullet.x < 0 || bullet.x > canvas.width) {
+          bullets.splice(index, 1);
+        }
+      });
+    }
+
+    // Função para exibir frases
+    function showPhrase() {
+      if (player1.direction === null && player2.direction === null) {
+        const phraseSource = Math.random() > 0.5 ? phrases.jesus : phrases.buda;
+        currentPhrase = phraseSource[Math.floor(Math.random() * phraseSource.length)];
+        document.getElementById('phrase').textContent = currentPhrase;
+      }
+    }
+
+    // Função para desenhar a vida e os corações dos jogadores
+    function drawHealth() {
+      // Corações de Jesus
+      ctx.fillStyle = 'red';
+      ctx.font = '30px Arial';
+      ctx.fillText(`❤`.repeat(player1.health), player1.x + player.width / 2 - 10, player1.y - 10);
+      
+      // Corações de Buda
+      ctx.fillText(`❤`.repeat(player2.health), player2.x + player.width / 2 - 10, player2.y - 10);
+    }
+
+    // Função para movimentar o jogador
+    function movePlayer(player) {
+      if (player.direction === 'left') {
+        player.x -= 5;
+      } else if (player.direction === 'right') {
+        player.x += 5;
+      }
+
+      if (player.x < 0) {
+        player.x = canvas.width;
+      } else if (player.x > canvas.width) {
+        player.x = 0;
+      }
+    }
+
+    // Função para disparo
+    function shoot(player) {
+      if (!player.isShooting) {
+        let bullet = {
+          x: player.x + player.width / 2 - 5,
+          y: player.y + player.height / 2 - 5,
+          width: 10,
+          height: 5,
+          direction: player.shootDirection,
+        };
+        bullets.push(bullet);
+        player.isShooting = true;
+        setTimeout(() => player.isShooting = false, 500);
+      }
+    }
+
+    // Função para atualizar o jogo
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Desenhar jogadores
+      drawPlayer(player1);
+      drawPlayer(player2);
+
+      // Desenhar balas
+      drawBullets();
+      
+      // Desenhar saúde e corações
+      drawHealth();
+
+      // Exibir frases
+      showPhrase();
+
+      // Atualizar movimento dos jogadores
+      if (player1.direction) movePlayer(player1);
+      if (player2.direction) movePlayer(player2);
+
+      // Repetir a cada 16ms
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Controle dos botões
+    document.getElementById('leftButton').addEventListener('click', () => {
+      player1.direction = 'left';
+    });
+
+    document.getElementById('rightButton').addEventListener('click', () => {
+      player1.direction = 'right';
+    });
+
+    document.getElementById('shootButton').addEventListener('click', () => {
+      shoot(player1);
+    });
+
+    // Iniciar o jogo
+    gameLoop();
+  </script>
+</body>
+</html>
