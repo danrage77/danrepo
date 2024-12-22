@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Battle of Wisdom</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+    }
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+<canvas id="battle"></canvas>
+<script>
+  const canvas = document.getElementById("battle");
+  const ctx = canvas.getContext("2d");
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  // Arena
+  const arena = {
+    width: canvas.width,
+    height: canvas.height,
+    draw() {
+      ctx.fillStyle = "#282c34"; // Fundo da arena
+      ctx.fillRect(0, 0, this.width, this.height);
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 4;
+      ctx.strokeRect(50, 50, this.width - 100, this.height - 100);
+    },
+  };
+
+  // Jogadores
+  const player1 = {
+    x: 200,
+    y: canvas.height / 2,
+    color: "gold",
+    size: 50,
+    draw() {
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fill();
+    },
+    moveUp() {
+      if (this.y > 100) this.y -= 20;
+    },
+    moveDown() {
+      if (this.y < canvas.height - 100) this.y += 20;
+    },
+    castSpell() {
+      return new Spell(this.x + this.size + 10, this.y, "gold");
+    },
+  };
+
+  const player2 = {
+    x: canvas.width - 200,
+    y: canvas.height / 2,
+    color: "blue",
+    size: 50,
+    draw() {
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fill();
+    },
+    moveUp() {
+      if (this.y > 100) this.y -= 20;
+    },
+    moveDown() {
+      if (this.y < canvas.height - 100) this.y += 20;
+    },
+    castSpell() {
+      return new Spell(this.x - this.size - 10, this.y, "blue");
+    },
+  };
+
+  // Magias
+  class Spell {
+    constructor(x, y, color) {
+      this.x = x;
+      this.y = y;
+      this.color = color;
+      this.radius = 10;
+      this.speed = color === "gold" ? 8 : -8;
+    }
+
+    draw() {
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    update() {
+      this.x += this.speed;
+      this.draw();
+    }
+  }
+
+  const spells = [];
+
+  // Input
+  const keys = {};
+  window.addEventListener("keydown", (e) => (keys[e.key] = true));
+  window.addEventListener("keyup", (e) => (keys[e.key] = false));
+
+  // Game Loop
+  function gameLoop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    arena.draw();
+    player1.draw();
+    player2.draw();
+
+    // Player Movements
+    if (keys["w"]) player1.moveUp();
+    if (keys["s"]) player1.moveDown();
+    if (keys["ArrowUp"]) player2.moveUp();
+    if (keys["ArrowDown"]) player2.moveDown();
+
+    // Casting Spells
+    if (keys["d"]) spells.push(player1.castSpell());
+    if (keys["ArrowLeft"]) spells.push(player2.castSpell());
+
+    // Update Spells
+    spells.forEach((spell, index) => {
+      spell.update();
+      if (spell.x < 0 || spell.x > canvas.width) spells.splice(index, 1); // Remove quando sai da tela
+    });
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  gameLoop();
+
+  // Ajustar tamanho ao redimensionar
+  window.addEventListener("resize", () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  });
+</script>
+</body>
+</html>
