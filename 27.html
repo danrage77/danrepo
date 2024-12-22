@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Jogo de Magias - Jesus vs Buda</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #f0f0f0;
+    }
+
+    canvas {
+      display: block;
+      background-color: #fff;
+    }
+
+    /* Estilo dos botões */
+    #leftBtn, #rightBtn, #shootBtn {
+      position: absolute;
+      background-color: rgba(0, 0, 0, 0.7);
+      border: none;
+      color: white;
+      padding: 10px;
+      font-size: 18px;
+      cursor: pointer;
+      border-radius: 50%;
+    }
+
+    #leftBtn { bottom: 30px; left: 30px; }
+    #rightBtn { bottom: 30px; left: 100px; }
+    #shootBtn { bottom: 80px; left: 60px; }
+
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <button id="leftBtn">←</button>
+  <button id="rightBtn">→</button>
+  <button id="shootBtn">⚡</button>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let player1 = { x: canvas.width / 2 - 100, y: canvas.height - 100, width: 50, height: 50, color: 'blue', dx: 0, health: 3, name: 'Jesus' };
+    let player2 = { x: canvas.width / 2 + 50, y: 50, width: 50, height: 50, color: 'red', dx: 0, health: 3, name: 'Buda' };
+    let bullets = [];
+    let obstacles = [];
+    let points = { player1: 0, player2: 0 };
+
+    const keys = {
+      left: false,
+      right: false,
+      shoot: false
+    };
+
+    // Botões de controle
+    document.getElementById("leftBtn").addEventListener("click", () => keys.left = true);
+    document.getElementById("rightBtn").addEventListener("click", () => keys.right = true);
+    document.getElementById("shootBtn").addEventListener("click", () => keys.shoot = true);
+
+    let moveStep = 0; // Controla o movimento do jogador
+    const stepSize = 50; // Tamanho do passo do movimento (2 passos)
+
+    // Movimentos
+    function movePlayer(player) {
+      if (keys.left && moveStep === 0) {
+        player.dx = -stepSize;
+        moveStep = 1; // Proibindo movimento contínuo
+      } else if (keys.right && moveStep === 0) {
+        player.dx = stepSize;
+        moveStep = 1; // Proibindo movimento contínuo
+      } else {
+        player.dx = 0; // Parar movimento após 2 passos
+      }
+      
+      player.x += player.dx;
+
+      // Se o jogador passar do lado esquerdo, ele aparece no lado direito
+      if (player.x + player.width < 0) {
+        player.x = canvas.width;
+      }
+
+      // Se o jogador passar do lado direito, ele aparece no lado esquerdo
+      if (player.x > canvas.width) {
+        player.x = -player.width;
+      }
+    }
+
+    // Atualizar o jogo
+    function updateGame() {
+      movePlayer(player1);
+      moveStep = 0; // Resetar a variável de controle do movimento
+
+      // Atualiza as balas
+      for (let i = 0; i < bullets.length; i++) {
+        bullets[i].y += bullets[i].dy;
+        // Verifica se a bala saiu da tela
+        if (bullets[i].y < 0) {
+          bullets.splice(i, 1);
+          i--;
+        }
+      }
+
+      // Desenhar
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Desenho dos jogadores
+      ctx.fillStyle = player1.color;
+      ctx.fillRect(player1.x, player1.y, player1.width, player1.height);
+      ctx.fillStyle = player2.color;
+      ctx.fillRect(player2.x, player2.y, player2.width, player2.height);
+
+      // Desenho das balas
+      ctx.fillStyle = 'yellow';
+      bullets.forEach(bullet => {
+        ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+      });
+
+      // Desenho da vida
+      ctx.font = '20px Arial';
+      ctx.fillStyle = 'black';
+      ctx.fillText(`Vida de Jesus: ${player1.health}`, 20, 40);
+      ctx.fillText(`Vida de Buda: ${player2.health}`, canvas.width - 140, 40);
+
+      // Frases famosas quando os jogadores estão parados
+      if (keys.left === false && keys.right === false) {
+        if (player1.name === 'Jesus') {
+          ctx.fillText("Ame ao próximo como a si mesmo", canvas.width / 2 - 100, canvas.height / 2);
+        } else {
+          ctx.fillText("O caminho é o sofrimento", canvas.width / 2 - 100, canvas.height / 2);
+        }
+      }
+    }
+
+    // A cada 60ms
+    setInterval(updateGame, 1000 / 60);
+  </script>
+</body>
+</html>
