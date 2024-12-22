@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Battle of Wisdom - Mobile Version</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+      touch-action: none;
+    }
+    canvas {
+      display: block;
+    }
+    .control-panel {
+      position: absolute;
+      bottom: 50px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 500px;
+    }
+    .control-button {
+      background-color: rgba(255, 255, 255, 0.8);
+      border: none;
+      border-radius: 10px;
+      padding: 20px;
+      font-size: 20px;
+      cursor: pointer;
+    }
+    #shotButton {
+      position: absolute;
+      top: 50px;
+      left: 50%;
+      transform: translateX(-50%) rotate(180deg);
+      background-color: rgba(255, 0, 0, 0.8);
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      color: white;
+      font-size: 20px;
+    }
+    #moveRight, #moveLeft {
+      width: 60px;
+      height: 60px;
+      font-size: 30px;
+    }
+  </style>
+</head>
+<body>
+<canvas id="battle"></canvas>
+<div class="control-panel">
+  <button id="moveLeft" class="control-button">←</button>
+  <button id="moveRight" class="control-button">→</button>
+</div>
+<button id="shotButton" class="control-button">↑</button>
+
+<script>
+  const canvas = document.getElementById("battle");
+  const ctx = canvas.getContext("2d");
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  let playerId = "player1";
+  let players = {
+    player1: {
+      x: 200,
+      y: canvas.height / 2,
+      color: "gold",
+      size: 50,
+      health: 100,
+    },
+    player2: {
+      x: canvas.width - 200,
+      y: canvas.height / 2,
+      color: "blue",
+      size: 50,
+      health: 100,
+      ai: true, // Player 2 is AI-controlled
+    }
+  };
+
+  const spells = [];
+
+  // Arena
+  function drawArena() {
+    ctx.fillStyle = "#282c34";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(50, 50, canvas.width - 100, canvas.height - 100);
+  }
+
+  // Jogadores
+  function drawPlayers() {
+    Object.keys(players).forEach((id) => {
+      const player = players[id];
+      ctx.fillStyle = player.color;
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, player.size, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Barra de vida
+      ctx.fillStyle = "green";
+      const healthX = id === "player1" ? 100 : canvas.width - 300;
+      ctx.fillRect(healthX, 50, player.health * 2, 20);
+      ctx.strokeStyle = "#fff";
+      ctx.strokeRect(healthX, 50, 200, 20);
+    });
+  }
+
+  // Magias
+  function launchSpell(playerId) {
+    const player = players[playerId];
+    const spellSpeed = playerId === "player1" ? 8 : -8;
+    spells.push({ x: player.x, y: player.y, speed: spellSpeed, color: playerId === "player1" ? "gold" : "blue" });
+  }
+
+  function updateSpells() {
+    spells.forEach((spell, index) => {
+      spell.x += spell.speed;
+      ctx.fillStyle = spell.color;
+      ctx.beginPath();
+      ctx.arc(spell.x, spell.y, 10, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (spell.x < 0 || spell.x > canvas.width) spells.splice(index, 1);
+    });
+  }
+
+  // IA para o Jogador 2 (Bot)
+  function aiMove() {
+    const player2 = players.player2;
+
+    // Mover o jogador 2 para cima ou para baixo com base em uma lógica simples
+    if (Math.random() < 0.5) {
+      player2.y += Math.random() < 0.5 ? 20 : -20;
+    }
+
+    // Lançar magia a cada 3 segundos
+    if (Math.random() < 0.01) {
+      launchSpell("player2");
+    }
+  }
+
+  // Controles do jogador 1
+  document.getElementById("moveLeft").addEventListener("click", () => {
+    if (players[playerId].x > 100) players[playerId].x -= 20;
+  });
+
+  document.getElementById("moveRight").addEventListener("click", () => {
+    if (players[playerId].x < canvas.width - 100) players[playerId].x += 20;
+  });
+
+  document.getElementById("shotButton").addEventListener("click", () => {
+    launchSpell("player1");
+  });
+
+  // Game Loop
+  function gameLoop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawArena();
+    drawPlayers();
+    updateSpells();
+
+    // IA controla o Player 2
+    if (players.player2.ai) {
+      aiMove();
+    }
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  gameLoop();
+
+  window.addEventListener("resize", () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  });
+</script>
+</body>
+</html>
