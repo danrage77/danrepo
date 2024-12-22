@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Battle of Wisdom</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+    }
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+<canvas id="battle"></canvas>
+<script>
+  const canvas = document.getElementById("battle");
+  const ctx = canvas.getContext("2d");
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const arena = {
+    width: canvas.width,
+    height: canvas.height,
+    draw() {
+      ctx.fillStyle = "#282c34"; // Fundo da arena
+      ctx.fillRect(0, 0, this.width, this.height);
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 4;
+      ctx.strokeRect(50, 50, this.width - 100, this.height - 100);
+    },
+  };
+
+  let gameOver = false;
+
+  const player1 = {
+    x: 200,
+    y: canvas.height / 2,
+    color: "gold",
+    hitColor: "red",
+    size: 50,
+    health: 100,
+    isAscending: false,
+    draw() {
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fill();
+      this.drawHealthBar();
+    },
+    drawHealthBar() {
+      ctx.fillStyle = "green";
+      ctx.fillRect(100, 50, this.health * 2, 20);
+      ctx.strokeStyle = "#fff";
+      ctx.strokeRect(100, 50, 200, 20);
+    },
+    moveUp() {
+      if (this.y > 100) this.y -= 20;
+    },
+    moveDown() {
+      if (this.y < canvas.height - 100) this.y += 20;
+    },
+    castSpell() {
+      return new Spell(this.x + this.size + 10, this.y, "gold");
+    },
+    ascend() {
+      if (this.y > -100) this.y -= 5;
+    },
+  };
+
+  const player2 = {
+    x: canvas.width - 200,
+    y: canvas.height / 2,
+    color: "blue",
+    hitColor: "red",
+    size: 50,
+    health: 100,
+    isMeditating: false,
+    draw() {
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fill();
+      this.drawHealthBar();
+    },
+    drawHealthBar() {
+      ctx.fillStyle = "green";
+      ctx.fillRect(canvas.width - 300, 50, this.health * 2, 20);
+      ctx.strokeStyle = "#fff";
+      ctx.strokeRect(canvas.width - 300, 50, 200, 20);
+    },
+    moveUp() {
+      if (this.y > 100) this.y -= 20;
+    },
+    moveDown() {
+      if (this.y < canvas.height - 100) this.y += 20;
+    },
+    castSpell() {
+      return new Spell(this.x - this.size - 10, this.y, "blue", -8);
+    },
+    meditate() {
+      if (this.size > 30) this.size -= 0.2; // Reduz o tamanho para dar a impressão de "desaparecer".
+    },
+  };
+
+  class Spell {
+    constructor(x, y, color, speed = 8) {
+      this.x = x;
+      this.y = y;
+      this.color = color;
+      this.radius = 10;
+      this.speed = speed;
+    }
+
+    draw() {
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    update() {
+      this.x += this.speed;
+      this.draw();
+    }
+  }
+
+  const spells = [];
+  const keys = {};
+  window.addEventListener("keydown", (e) => (keys[e.key] = true));
+  window.addEventListener("keyup", (e) => (keys[e.key] = false));
+
+  function checkCollision(player, spell) {
+    const dist = Math.sqrt((player.x - spell.x) ** 2 + (player.y - spell.y) ** 2);
+    return dist < player.size + spell.radius;
+  }
+
+  function gameLoop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    arena.draw();
+
+    if (!gameOver) {
+      player1.draw();
+      player2.draw();
+
+      if (keys["w"]) player1.moveUp();
+      if (keys["s"]) player1.moveDown();
+      if (keys["ArrowUp"]) player2.moveUp();
+      if (keys["ArrowDown"]) player2.moveDown();
+
+      if (keys["d"]) spells.push(player1.castSpell());
+      if (keys["ArrowLeft"]) spells.push(player2.castSpell());
+
+      spells.forEach((spell, index) => {
+        spell.update();
+
+        if (checkCollision(player2, spell) && spell.color === "gold") {
+          player2.health -= 10;
+          player2.color = player2.hitColor;
+          setTimeout(() => (player2.color = "blue"), 200);
+          spells.splice(index, 1);
+        } else if (checkCollision(player1, spell) && spell.color === "blue") {
+          player1.health -= 10;
+          player1.color = player1.hitColor;
+          setTimeout(() => (player1.color = "gold"), 200);
+          spells.splice(index, 1);
+        }
+
+        if (spell.x < 0 || spell.x > canvas.width) spells.splice(index, 1);
+      });
+
+      if (player1.health <= 0) {
+        gameOver = true;
+        player1.isAscending = true;
+      }
+
+      if (player2.health <= 0) {
+        gameOver = true;
+        player2.isMeditating = true;
+      }
+    } else {
+      if (player1.isAscending) {
+        player1.ascend();
+        player1.draw();
+      }
+
+      if (player2.isMeditating) {
+        player2.meditate();
+        player2.draw();
+      }
+    }
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  gameLoop();
+
+  window.addEventListener("resize", () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  });
+</script>
+</body>
+</html>i
