@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Battle of Wisdom - Mobile Version</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+      touch-action: none;
+    }
+    canvas {
+      display: block;
+    }
+    .control-panel {
+      position: absolute;
+      bottom: 50px;
+      left: 10px;
+      z-index: 10;
+    }
+    .control-button {
+      background-color: rgba(255, 255, 255, 0.8);
+      border: none;
+      border-radius: 10px;
+      margin: 5px;
+      padding: 15px 25px;
+      font-size: 20px;
+      cursor: pointer;
+    }
+    #moveUp {
+      margin-left: 0;
+    }
+    #moveDown {
+      margin-left: 0;
+    }
+    #castSpell {
+      margin-left: 0;
+    }
+  </style>
+</head>
+<body>
+<canvas id="battle"></canvas>
+<div class="control-panel">
+  <button id="moveUp" class="control-button">↑</button>
+  <button id="moveDown" class="control-button">↓</button>
+  <button id="castSpell" class="control-button">Cast Spell</button>
+</div>
+
+<script>
+  const canvas = document.getElementById("battle");
+  const ctx = canvas.getContext("2d");
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  let playerId = "player2";
+  let players = {
+    player2: {
+      x: canvas.width - 200,
+      y: canvas.height / 2,
+      color: "blue",
+      size: 50,
+      health: 100,
+    }
+  };
+
+  const spells = [];
+
+  // Arena
+  function drawArena() {
+    ctx.fillStyle = "#282c34";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(50, 50, canvas.width - 100, canvas.height - 100);
+  }
+
+  // Jogadores
+  function drawPlayers() {
+    Object.keys(players).forEach((id) => {
+      const player = players[id];
+      ctx.fillStyle = player.color;
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, player.size, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Barra de vida
+      ctx.fillStyle = "green";
+      ctx.fillRect(canvas.width - 300, 50, player.health * 2, 20);
+      ctx.strokeStyle = "#fff";
+      ctx.strokeRect(canvas.width - 300, 50, 200, 20);
+    });
+  }
+
+  // Magias
+  function launchSpell() {
+    const player = players[playerId];
+    const spellSpeed = -8;
+    spells.push({ x: player.x, y: player.y, speed: spellSpeed, color: "blue" });
+  }
+
+  function updateSpells() {
+    spells.forEach((spell, index) => {
+      spell.x += spell.speed;
+      ctx.fillStyle = spell.color;
+      ctx.beginPath();
+      ctx.arc(spell.x, spell.y, 10, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (spell.x < 0 || spell.x > canvas.width) spells.splice(index, 1);
+    });
+  }
+
+  // Controles do jogador
+  document.getElementById("moveUp").addEventListener("click", () => {
+    if (players[playerId].y > 100) players[playerId].y -= 20;
+  });
+
+  document.getElementById("moveDown").addEventListener("click", () => {
+    if (players[playerId].y < canvas.height - 100) players[playerId].y += 20;
+  });
+
+  document.getElementById("castSpell").addEventListener("click", launchSpell);
+
+  // Game Loop
+  function gameLoop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawArena();
+    drawPlayers();
+    updateSpells();
+    requestAnimationFrame(gameLoop);
+  }
+
+  gameLoop();
+
+  window.addEventListener("resize", () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  });
+</script>
+</body>
+</html>
