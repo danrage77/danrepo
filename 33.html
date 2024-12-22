@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Jogo de Magias - Jesus vs Buda</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #f0f0f0;
+    }
+    canvas {
+      display: block;
+      background-color: #fff;
+    }
+    #leftBtn, #rightBtn, #shootBtn {
+      position: absolute;
+      background-color: rgba(0, 0, 0, 0.7);
+      border: none;
+      color: white;
+      padding: 15px;
+      font-size: 25px;
+      cursor: pointer;
+      border-radius: 50%;
+      z-index: 10;
+    }
+    #leftBtn { bottom: 30px; left: 30px; }
+    #rightBtn { bottom: 30px; left: 120px; }
+    #shootBtn { bottom: 80px; left: 70px; }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <button id="leftBtn">←</button>
+  <button id="rightBtn">→</button>
+  <button id="shootBtn">⚡</button>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let player1 = { x: canvas.width / 2 - 100, y: canvas.height - 100, width: 50, height: 50, color: 'blue', dx: 0, health: 3, name: 'Jesus' };
+    let player2 = { x: canvas.width / 2 + 50, y: 50, width: 50, height: 50, color: 'red', dx: 0, health: 3, name: 'Buda', speed: 3 };
+    let bullets = [];
+    const keys = { left: false, right: false, shoot: false };
+    let aiCooldown = 0;
+    let gameOverMessage = "";
+
+    const leftBtn = document.getElementById("leftBtn");
+    const rightBtn = document.getElementById("rightBtn");
+    const shootBtn = document.getElementById("shootBtn");
+
+    leftBtn.addEventListener("mousedown", () => { keys.left = true; });
+    leftBtn.addEventListener("mouseup", () => { keys.left = false; });
+    leftBtn.addEventListener("touchstart", () => { keys.left = true; });
+    leftBtn.addEventListener("touchend", () => { keys.left = false; });
+
+    rightBtn.addEventListener("mousedown", () => { keys.right = true; });
+    rightBtn.addEventListener("mouseup", () => { keys.right = false; });
+    rightBtn.addEventListener("touchstart", () => { keys.right = true; });
+    rightBtn.addEventListener("touchend", () => { keys.right = false; });
+
+    shootBtn.addEventListener("mousedown", () => { keys.shoot = true; });
+    shootBtn.addEventListener("mouseup", () => { keys.shoot = false; });
+    shootBtn.addEventListener("touchstart", () => { keys.shoot = true; });
+    shootBtn.addEventListener("touchend", () => { keys.shoot = false; });
+
+    function movePlayer(player) {
+      if (keys.left) player.dx = -5;
+      else if (keys.right) player.dx = 5;
+      else player.dx = 0;
+
+      player.x += player.dx;
+
+      if (player.x + player.width < 0) player.x = canvas.width;
+      if (player.x > canvas.width) player.x = -player.width;
+    }
+
+    function shootBullet(player) {
+      if (player === player1 && keys.shoot) {
+        bullets.push({ x: player.x + player.width / 2 - 5, y: player.y, width: 10, height: 10, color: player.color, speed: -5 });
+        keys.shoot = false;
+      } else if (player === player2 && aiCooldown <= 0) {
+        bullets.push({ x: player.x + player.width / 2 - 5, y: player.y + player.height, width: 10, height: 10, color: player.color, speed: 5 });
+        aiCooldown = 50;
+      }
+    }
+
+    function aiMove() {
+      if (aiCooldown > 0) aiCooldown--;
+
+      if (player2.x < player1.x) player2.dx = player2.speed;
+      else if (player2.x > player1.x) player2.dx = -player2.speed;
+      else player2.dx = 0;
+
+      player2.x += player2.dx;
+
+      if (player2.x + player2.width < 0) player2.x = canvas.width;
+      if (player2.x > canvas.width) player2.x = -player2.width;
+    }
+
+    function checkCollisions() {
+      for (let i = 0; i < bullets.length; i++) {
+        let bullet = bullets[i];
+        if (bullet.color === player1.color && bullet.y < player2.y + player2.height && bullet.y > player2.y &&
+          bullet.x + bullet.width > player2.x && bullet.x < player2.x + player2.width) {
+          player2.health--;
+          bullets.splice(i, 1);
+          i--;
+        }
+        if (bullet.color === player2.color && bullet.y > player1.y && bullet.y < player1.y + player1.height &&
+          bullet.x + bullet.width > player1.x && bullet.x < player1.x + player1.width) {
+          player1.health--;
+          bullets.splice(i, 1);
+          i--;
+        }
+      }
+    }
+
+    function resetGame() {
+      if (player2.health <= 0) {
+        gameOverMessage = "Buda retorna mais forte!";
+        player2.health = Math.min(5, player2.health + 2);
+        player2.speed += 1;
+        player1.health = 3;
+        bullets = [];
+        setTimeout(() => gameOverMessage = "", 2000);
+      }
+    }
+
+    function updateGame() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (player1.health <= 0) {
+        gameOverMessage = "Jesus foi derrotado!";
+        player1.health = 3;
+        player2.health = 3;
+        player2.speed = 3;
+        bullets = [];
+        setTimeout(() => gameOverMessage = "", 2000);
+      }
+
+      movePlayer(player1);
+      aiMove();
+      shootBullet(player1);
+      shootBullet(player2);
+      checkCollisions();
+      resetGame();
+
+      ctx.fillStyle = player1.color;
+      ctx.fillRect(player1.x, player1.y, player1.width, player1.height);
+      ctx.fillStyle = player2.color;
+      ctx.fillRect(player2.x, player2.y, player2.width, player2.height);
+
+      bullets.forEach(bullet => {
+        bullet.y += bullet.speed;
+        ctx.fillStyle = bullet.color;
+        ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+      });
+
+      ctx.fillStyle = 'black';
+      ctx.font = '20px Arial';
+      ctx.fillText(`Jesus ❤ ${player1.health}`, 20, canvas.height - 20);
+      ctx.fillText(`Buda ❤ ${player2.health}`, 20, 20);
+
+      if (gameOverMessage) {
+        ctx.font = '30px Arial';
+        ctx.fillStyle = 'red';
+        ctx.fillText(gameOverMessage, canvas.width / 2 - 100, canvas.height / 2);
+      }
+    }
+
+    setInterval(updateGame, 1000 / 60);
+  </script>
+</body>
+</html>
