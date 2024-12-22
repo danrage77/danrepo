@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, user-scalable=no">
+  <title>Jesus vs. Buddha</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background-color: black;
+    }
+    canvas {
+      display: block;
+    }
+    button {
+      position: absolute;
+      background-color: rgba(255, 255, 255, 0.5);
+      border: none;
+      border-radius: 50%;
+      width: 90px;
+      height: 90px;
+      font-size: 16px;
+      z-index: 10;
+    }
+    #left {
+      bottom: 60px;
+      right: 150px;
+    }
+    #right {
+      bottom: 60px;
+      right: 40px;
+    }
+    #shoot {
+      bottom: 150px;
+      right: 95px;
+    }
+    #separator {
+      position: absolute;
+      bottom: 90px; /* Reduzido para ficar mais abaixo */
+      left: 0;
+      width: 100%;
+      height: 5px;
+      background-color: white;
+      z-index: 5;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <button id="left">◀</button>
+  <button id="right">▶</button>
+  <button id="shoot">⚡</button>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const separatorHeight = 120; // Ajustado para a altura do separador entre controle e personagem
+    let jesus = { x: 100, y: canvas.height - separatorHeight - 120, width: 50, height: 50, color: 'blue', health: 3, angle: 0 };
+    let buddha = { x: canvas.width - 150, y: 50, width: 50, height: 50, color: 'red', health: 3, angle: 0 };
+    let projectiles = [];
+    let buddhaDirection = 1;
+
+    const moveSpeed = 10;
+    const projectileSpeed = 15;
+
+    const leftButton = document.getElementById('left');
+    const rightButton = document.getElementById('right');
+    const shootButton = document.getElementById('shoot');
+
+    let movingLeft = false;
+    let movingRight = false;
+
+    function drawPlayer(player, name) {
+      ctx.save();
+      ctx.translate(player.x + player.width / 2, player.y + player.height / 2);
+      ctx.rotate(player.angle * Math.PI / 180);
+      ctx.fillStyle = player.color;
+
+      // Desenha como um triângulo
+      ctx.beginPath();
+      if (player === jesus) {
+        ctx.moveTo(0, -player.height / 2); // Ponta para cima
+        ctx.lineTo(-player.width / 2, player.height / 2);
+        ctx.lineTo(player.width / 2, player.height / 2);
+      } else {
+        ctx.moveTo(0, player.height / 2); // Ponta para baixo
+        ctx.lineTo(-player.width / 2, -player.height / 2);
+        ctx.lineTo(player.width / 2, -player.height / 2);
+      }
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
+
+      // Nome e coração abaixo do jogador
+      ctx.fillStyle = 'white';
+      ctx.font = '20px Arial';
+      ctx.fillText(name, player.x + player.width / 2 - 20, player.y + player.height + 20);
+      ctx.fillText('❤'.repeat(player.health), player.x + player.width / 2 - 30, player.y + player.height + 40);
+    }
+
+    function drawProjectiles() {
+      projectiles.forEach((p, index) => {
+        const size = 20;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+        ctx.fill();
+
+        p.y += p.speed;
+
+        // Verifica colisão
+        if (p.owner === 'jesus' && p.y < buddha.y + buddha.height && p.y > buddha.y && p.x > buddha.x && p.x < buddha.x + buddha.width) {
+          buddha.health -= 1;
+          projectiles.splice(index, 1);
+          buddha.angle += 45; // Rotaciona Buddha ao ser atingido
+        } else if (p.owner === 'buddha' && p.y > jesus.y && p.y < jesus.y + jesus.height && p.x > jesus.x && p.x < jesus.x + jesus.width) {
+          jesus.health -= 1;
+          projectiles.splice(index, 1);
+          jesus.angle += 45; // Rotaciona Jesus ao ser atingido
+        }
+      });
+    }
+
+    function moveBuddha() {
+      buddha.x += buddhaDirection * moveSpeed / 2;
+      if (buddha.x < 0 || buddha.x + buddha.width > canvas.width) {
+        buddhaDirection *= -1;
+      }
+      if (Math.random() < 0.01) {
+        projectiles.push({ x: buddha.x + buddha.width / 2, y: buddha.y + buddha.height, speed: projectileSpeed, color: 'red', owner: 'buddha' });
+      }
+    }
+
+    function update() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (movingLeft && jesus.x > 0) jesus.x -= moveSpeed;
+      if (movingRight && jesus.x + jesus.width < canvas.width) jesus.x += moveSpeed;
+
+      // Lógica de atravessar a tela (como no Pac-Man)
+      if (jesus.x > canvas.width) {
+        jesus.x = -jesus.width;
+      } else if (jesus.x + jesus.width < 0) {
+        jesus.x = canvas.width;
+      }
+
+      if (buddha.x > canvas.width) {
+        buddha.x = -buddha.width;
+      } else if (buddha.x + buddha.width < 0) {
+        buddha.x = canvas.width;
+      }
+
+      drawPlayer(jesus, 'Jesus');
+      drawPlayer(buddha, 'Buddha');
+      drawProjectiles();
+      moveBuddha();
+
+      if (jesus.health <= 0 || buddha.health <= 0) {
+        ctx.fillStyle = 'white';
+        ctx.font = '40px Arial';
+        ctx.fillText(jesus.health <= 0 ? 'Buddha Wins!' : 'Jesus Wins!', canvas.width / 2 - 100, canvas.height / 2);
+        return;
+      }
+
+      requestAnimationFrame(update);
+    }
+
+    leftButton.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      movingLeft = true;
+    });
+    leftButton.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      movingLeft = false;
+    });
+    rightButton.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      movingRight = true;
+    });
+    rightButton.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      movingRight = false;
+    });
+    shootButton.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      projectiles.push({ x: jesus.x + jesus.width / 2, y: jesus.y, speed: -projectileSpeed, color: 'blue', owner: 'jesus' });
+    });
+
+    update();
+  </script>
+</body>
+</html>
