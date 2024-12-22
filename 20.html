@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jogo de Magias</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #f0f0f0;
+    }
+    canvas {
+      display: block;
+      margin: 0 auto;
+      background-color: #222;
+    }
+    .button {
+      position: absolute;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      border: none;
+      font-size: 20px;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .left {
+      left: 20px;
+      bottom: 80px;
+    }
+    .right {
+      right: 20px;
+      bottom: 80px;
+    }
+    .shoot {
+      bottom: 150px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 24px;
+    }
+    .health-bar {
+      position: absolute;
+      font-size: 30px;
+      color: #ff0000;
+    }
+    .name {
+      font-size: 24px;
+      color: white;
+      text-align: center;
+      position: absolute;
+      width: 100%;
+      top: 0;
+    }
+    .obstacle {
+      width: 50px;
+      height: 50px;
+      background-color: #ff0000;
+      position: absolute;
+      animation: fly 2s linear infinite;
+    }
+    @keyframes fly {
+      from {
+        top: -50px;
+      }
+      to {
+        top: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <div id="player1-name" class="name">Jesus</div>
+  <div id="player2-name" class="name" style="top: 85%;">Buda</div>
+
+  <button class="button left" id="leftButton">Move Left</button>
+  <button class="button right" id="rightButton">Move Right</button>
+  <button class="button shoot" id="shootButton">Shoot</button>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let player1 = {
+      x: canvas.width / 2 - 50,
+      y: canvas.height - 100,
+      width: 50,
+      height: 50,
+      color: 'blue',
+      health: 3,
+      isShooting: false,
+      direction: 'right',
+      score: 0,
+    };
+
+    let player2 = {
+      x: canvas.width / 2 - 50,
+      y: 50,
+      width: 50,
+      height: 50,
+      color: 'green',
+      health: 3,
+      isShooting: false,
+      direction: 'left',
+      score: 0,
+    };
+
+    let obstacles = [];
+    let bullets = [];
+
+    // Frases famosas de Jesus e Buda
+    const phrases = {
+      jesus: [
+        "Ama o próximo como a ti mesmo.",
+        "Eu sou o caminho, a verdade e a vida.",
+        "Bem-aventurados os pacificadores, pois serão chamados filhos de Deus."
+      ],
+      buda: [
+        "A paz vem de dentro de você mesmo.",
+        "Não viva no passado, não sonhe com o futuro, concentre a mente no momento presente.",
+        "A mente é tudo. O que você pensa, você se torna."
+      ]
+    };
+
+    // Função para gerar obstáculos aleatórios
+    function generateObstacle() {
+      if (!player1.isShooting && !player2.isShooting) {
+        let obstacle = {
+          x: Math.random() * canvas.width,
+          y: 0,
+          width: 50,
+          height: 50,
+          speed: 2
+        };
+        obstacles.push(obstacle);
+      }
+    }
+
+    // Função para desenhar o jogador
+    function drawPlayer(player) {
+      ctx.fillStyle = player.color;
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+      ctx.fillStyle = 'white';
+      ctx.fillText(`❤`.repeat(player.health), player.x + player.width / 2 - 10, player.y - 10);
+      ctx.fillText(player.direction === 'right' ? 'Jesus' : 'Buda', player.x + player.width / 2 - 10, player.y + player.height + 30);
+    }
+
+    // Função para desenhar obstáculos
+    function drawObstacles() {
+      obstacles.forEach((obstacle, index) => {
+        ctx.fillStyle = 'red';
+        ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+        obstacle.y += obstacle.speed;
+
+        // Se o obstáculo sair da tela, removê-lo
+        if (obstacle.y > canvas.height) {
+          obstacles.splice(index, 1);
+        }
+      });
+    }
+
+    // Função para desenhar balas
+    function drawBullets() {
+      bullets.forEach((bullet, index) => {
+        ctx.fillStyle = 'yellow';
+        ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+
+        // Se a bala sair da tela, removê-la
+        if (bullet.y < 0 || bullet.y > canvas.height) {
+          bullets.splice(index, 1);
+        }
+      });
+    }
+
+    // Função para desenhar frases
+    function drawText() {
+      if (!player1.isShooting && !player2.isShooting) {
+        ctx.fillStyle = 'white';
+        ctx.font = '30px Arial';
+        ctx.fillText(phrases.jesus[Math.floor(Math.random() * phrases.jesus.length)], player1.x, player1.y + player1.height + 50);
+        ctx.fillText(phrases.buda[Math.floor(Math.random() * phrases.buda.length)], player2.x, player2.y - 50);
+      }
+    }
+
+    // Função para movimentar o jogador
+    function movePlayer(player, direction) {
+      if (direction === 'left') {
+        player.x -= 5;
+      } else if (direction === 'right') {
+        player.x += 5;
+      }
+      if (player.x < 0) {
+        player.x = canvas.width;
+      } else if (player.x > canvas.width) {
+        player.x = 0;
+      }
+    }
+
+    // Função de disparo
+    function shoot(player) {
+      if (!player.isShooting) {
+        let bullet = {
+          x: player.x + player.width / 2 - 5,
+          y: player.y + player.height / 2 - 5,
+          width: 10,
+          height: 10,
+          direction: player.direction === 'right' ? 1 : -1
+        };
+        bullets.push(bullet);
+        player.isShooting = true;
+        setTimeout(() => player.isShooting = false, 500);
+      }
+    }
+
+    // Função para atualizar o jogo
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Gerar obstáculos se os jogadores não estiverem atirando
+      generateObstacle();
+
+      // Desenhar elementos
+      drawPlayer(player1);
+      drawPlayer(player2);
+      drawObstacles();
+      drawBullets();
+      drawText();
+
+      // Atualizar movimento
+      movePlayer(player1, player1.direction);
+      movePlayer(player2, player2.direction);
+
+      // Repetir a cada 16ms
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Controle dos botões
+    document.getElementById('leftButton').addEventListener('click', () => {
+      player1.direction = 'left';
+    });
+
+    document.getElementById('rightButton').addEventListener('click', () => {
+      player1.direction = 'right';
+    });
+
+    document.getElementById('shootButton').addEventListener('click', () => {
+      shoot(player1);
+    });
+
+    // Iniciar o jogo
+    gameLoop();
+  </script>
+</body>
+</html>
